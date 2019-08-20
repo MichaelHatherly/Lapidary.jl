@@ -13,7 +13,7 @@ navigation menu. It goes into the `\\title` LaTeX command.
 
 """
 module LaTeXWriter
-import ...Documenter: Documenter
+import ...Documenter: Documenter, read_ci_env
 
 """
     LaTeXWriter.LaTeX(; kwargs...)
@@ -90,8 +90,9 @@ function render(doc::Documents.Document, settings::LaTeX=LaTeX())
         cp(joinpath(doc.user.root, doc.user.build), joinpath(path, "build"))
         cd(joinpath(path, "build")) do
             name = doc.user.sitename
-            let tag = get(ENV, "TRAVIS_TAG", "")
-                if occursin(Base.VERSION_REGEX, tag)
+            let tag = read_ci_env()[:tag]
+
+                if occursin(Base.VERSION_REGEX, tag === nothing ? "" : tag)
                     v = VersionNumber(tag)
                     name *= "-$(v.major).$(v.minor).$(v.patch)"
                 end
@@ -188,6 +189,8 @@ end
 function writeheader(io::IO, doc::Documents.Document)
     custom = joinpath(doc.user.root, doc.user.source, "assets", "custom.sty")
     isfile(custom) ? cp(custom, "custom.sty"; force = true) : touch("custom.sty")
+
+    tag = haskey(ENV, "CI") ? read_ci_env(false)[:tag] : ""
     preamble =
         """
         \\documentclass{memoir}
@@ -197,7 +200,7 @@ function writeheader(io::IO, doc::Documents.Document)
 
         \\title{
             {\\HUGE $(doc.user.sitename)}\\\\
-            {\\Large $(get(ENV, "TRAVIS_TAG", ""))}
+            {\\Large $tag}
         }
         \\author{$(doc.user.authors)}
 

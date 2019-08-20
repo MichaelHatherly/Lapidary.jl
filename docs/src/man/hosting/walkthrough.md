@@ -130,7 +130,8 @@ to GitHub. The next step is to add the private key to Travis.
 
 In this section, we explain how to upload a private SSH key to Travis. By this point, you
 should have generated a private key and saved it to a file. If you haven't done this, go
-read [Generating an SSH Key](@ref).
+read [Generating an SSH Key](@ref).  If you are using a different CI system, you will need
+to do something else - consult your CI system's documentation.
 
 First, we need to Base64 encode the private key. Open Julia, and run the command
 

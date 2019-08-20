@@ -31,6 +31,17 @@ DocMeta.getdocmeta
 DocMeta.setdocmeta!
 ```
 
+### CI platforms supported by `deploydocs`
+
+```@docs
+Documenter.CI_SYSTEM
+TRAVIS
+GITLAB_CI
+CIRRUS_CI
+DRONE
+APPVEYOR
+```
+
 ## DocumenterTools
 
 ```@docs
