@@ -8,6 +8,8 @@
 
 * ![Enhancement][badge-enhancement] Documenter now support Azure DevOps Repos URL scheme when generating edit and source links pointing to the repository. ([#1462][github-1462], [#1463][github-1463], [#1471][github-1471])
 
+* ![Enhancement][badge-enhancement] Code blocks now support copy to clipboard button to quickly run the code snippet in Julia REPL. ([#1055](github-1055), [#1454](github-1454))
+
 ## Version `v0.25.3`
 
 * ![Feature][badge-feature] Documenter can now deploy from GitLab CI to GitHub Pages with `Documenter.GitLab`. ([#1448][github-1448])
@@ -586,6 +588,7 @@
 [github-1046]: https://github.com/JuliaDocs/Documenter.jl/issues/1046
 [github-1047]: https://github.com/JuliaDocs/Documenter.jl/pull/1047
 [github-1054]: https://github.com/JuliaDocs/Documenter.jl/pull/1054
+[github-1055]: https://github.com/JuliaDocs/Documenter.jl/issues/1055
 [github-1057]: https://github.com/JuliaDocs/Documenter.jl/issues/1057
 [github-1061]: https://github.com/JuliaDocs/Documenter.jl/pull/1061
 [github-1062]: https://github.com/JuliaDocs/Documenter.jl/pull/1062
@@ -679,6 +682,7 @@
 [github-1448]: https://github.com/JuliaDocs/Documenter.jl/pull/1448
 [github-1440]: https://github.com/JuliaDocs/Documenter.jl/pull/1440
 [github-1452]: https://github.com/JuliaDocs/Documenter.jl/pull/1452
+[github-1454]: https://github.com/JuliaDocs/Documenter.jl/pull/1454
 [github-1462]: https://github.com/JuliaDocs/Documenter.jl/issues/1462
 [github-1463]: https://github.com/JuliaDocs/Documenter.jl/pull/1463
 [github-1468]: https://github.com/JuliaDocs/Documenter.jl/pull/1468
