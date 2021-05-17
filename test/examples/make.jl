@@ -327,6 +327,8 @@ examples_html_local_doc = if "html-local" in EXAMPLE_BUILDS
         format = Documenter.HTML(
             assets = ["assets/custom.css"],
             prettyurls = false,
+            edit_link = nothing,
+            repolink = nothing,
             edit_branch = nothing,
             footer = nothing,
         ),

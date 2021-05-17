@@ -354,113 +354,87 @@ Returns the path of `file`, relative to the root of the Git repository, or `noth
 file is not in a Git repository.
 """
 function relpath_from_repo_root(file)
-    cd(dirname(file)) do
-        root = repo_root(file)
-        root !== nothing && startswith(file, root) ? relpath(file, root) : nothing
-    end
+    file = abspath(file)
+    root = repo_root(file)
+    root !== nothing && startswith(abspath(file), root) ? relpath(file, root) : nothing
 end
 
 function repo_commit(file)
-    cd(dirname(file)) do
-        readchomp(`git rev-parse HEAD`)
-    end
-end
-
-function format_commit(commit::AbstractString, host::RepoHost)
-    if host === RepoAzureDevOps
-        # if commit hash then preceeded by GC, if branch name then preceeded by GB
-        if match(r"[0-9a-fA-F]{40}", commit) !== nothing
-            commit = "GC$commit"
-        else
-            commit = "GB$commit"
+    # TODO: verify this error handling
+    try
+        cd(dirname(file)) do
+            readchomp(`git rev-parse HEAD`)
         end
-    else
-        return commit
+    catch e
+        @warn "Error in running repo_commit for $(file)" e
+        nothing
     end
 end
 
-function url(repo, file; commit=nothing)
-    file = abspath(file)
-    if !isfile(file)
-        @warn "couldn't find file \"$file\" when generating URL"
+# Remote URLs.
+# ------------
+include("Remotes.jl")
+using .Remotes: repofile
+
+url(remote, doc::Docs.DocStr) = url(remote, doc.data[:module], doc.data[:path], linerange(doc))
+function url(remote, mod, file, linerange; commit = nothing)
+    # quickly bail if file ===  nothing, which can happen when using e.g. Revise (see #689)
+    if file === nothing
+        @warn "nothing passed as file to url()" remote mod file linerange
+        @debug "Stacktrace" stacktrace()
         return nothing
     end
-    file = realpath(file)
-    remote = getremote(dirname(file))
-    isempty(repo) && (repo = "https://github.com/$remote/blob/{commit}{path}")
-    path = relpath_from_repo_root(file)
-    if path === nothing
-        nothing
-    else
-        hosttype = repo_host_from_url(repo)
-        repo = replace(repo, "{commit}" => format_commit(commit === nothing ? repo_commit(file) : commit, hosttype))
-        # Note: replacing any backslashes in path (e.g. if building the docs on Windows)
-        repo = replace(repo, "{path}" => string("/", replace(path, '\\' => '/')))
-        repo = replace(repo, "{line}" => "")
-        repo
-    end
-end
-
-url(remote, repo, doc) = url(remote, repo, doc.data[:module], doc.data[:path], linerange(doc))
-
-function url(remote, repo, mod, file, linerange)
-    file === nothing && return nothing # needed on julia v0.6, see #689
-    remote = getremote(dirname(file))
-    isabspath(file) && isempty(remote) && isempty(repo) && return nothing
-
-    # make sure we get the true path, as otherwise we will get different paths when we compute `root` below
+    # make sure we get the true path, as otherwise we will get different paths when we
+    # compute `root` below
     if isfile(file)
         file = realpath(abspath(file))
     end
 
-    hosttype = repo_host_from_url(repo)
-
-    # Format the line range.
-    line = format_line(linerange, LineRangeFormatting(hosttype))
     # Macro-generated methods such as those produced by `@deprecate` list their file as
     # `deprecated.jl` since that is where the macro is defined. Use that to help
     # determine the correct URL.
     if inbase(mod) || !isabspath(file)
-        file = replace(file, '\\' => '/')
-        base = "https://github.com/JuliaLang/julia/blob"
-        dest = "base/$file#$line"
-        if isempty(Base.GIT_VERSION_INFO.commit)
-            "$base/v$VERSION/$dest"
-        else
-            commit = Base.GIT_VERSION_INFO.commit
-            "$base/$commit/$dest"
-        end
+        ref = isempty(Base.GIT_VERSION_INFO.commit) ? "v$VERSION" : Base.GIT_VERSION_INFO.commit
+        repofile(Remotes.julia, ref, "base/$file", linerange)
     else
         path = relpath_from_repo_root(file)
-        if isempty(repo)
-            repo = "https://github.com/$remote/blob/{commit}{path}#{line}"
+        path === nothing && return nothing
+        remote = (remote === nothing) ? Remotes.URL("https://github.com/$(getremote(dirname(file)))/blob/{commit}{path}#{line}") : remote
+        commit = (commit === nothing) ? repo_commit(file) : commit
+        # repo_commit() can return nothing if it runs into an error
+        # TODO: verify this error handling
+        if commit === nothing
+            @warn "Unable to determine remote URL" remote mod file linerange
+            return nothing
         end
-        if path === nothing
-            nothing
-        else
-            repo = replace(repo, "{commit}" => format_commit(repo_commit(file), hosttype))
-            # Note: replacing any backslashes in path (e.g. if building the docs on Windows)
-            repo = replace(repo, "{path}" => string("/", replace(path, '\\' => '/')))
-            repo = replace(repo, "{line}" => line)
-            repo
-        end
+        repofile(remote, commit, path, linerange)
     end
 end
 
+"""
+    getremote(dir::AbstractString) -> String
+
+Automagically tries to determine the remote repository, either from the Git origin URL, or
+from CI environment variables. `dir` specifies which repository's `origin` it tries to look
+up.
+
+Returns `"\$USER/\$REPOSITORY"`, or an empty string if it was not able to determine the
+remote.
+"""
 function getremote(dir::AbstractString)
-    remote =
-        try
-            cd(() -> readchomp(`git config --get remote.origin.url`), dir)
-        catch err
-            ""
-        end
-    m = match(LibGit2.GITHUB_REGEX, remote)
-    if m === nothing
-        travis = get(ENV, "TRAVIS_REPO_SLUG", "")
-        isempty(travis) ? "" : travis
-    else
-        m[1]
+    # First, try to look for the Git repos origin:
+    remote = try
+        cd(() -> readchomp(`git config --get remote.origin.url`), dir)
+    catch err
+        ""
     end
+    m = match(LibGit2.GITHUB_REGEX, remote)
+    (m === nothing) || return m[1]
+    # First fallback, should work on Travis:
+    travis_slug = get(ENV, "TRAVIS_REPO_SLUG", "")
+    isempty(travis_slug) || return travis_slug
+    # Second fallback, should work on GitHub Actions:
+    return get(ENV, "GITHUB_REPOSITORY", "")
 end
 
 """
@@ -484,28 +458,13 @@ function inbase(m::Module)
     end
 end
 
-# Repository host from repository url
-# i.e. "https://github.com/something" => RepoGithub
-#      "https://bitbucket.org/xxx" => RepoBitbucket
-# If no match, returns RepoUnknown
-function repo_host_from_url(repoURL::String)
-    if occursin("bitbucket", repoURL)
-        return RepoBitbucket
-    elseif occursin("github", repoURL) || isempty(repoURL)
-        return RepoGithub
-    elseif occursin("gitlab", repoURL)
-        return RepoGitlab
-    elseif occursin("azure", repoURL)
-        return RepoAzureDevOps
-    else
-        return RepoUnknown
-    end
-end
-
 # Find line numbers.
 # ------------------
 
-linerange(doc) = linerange(doc.text, doc.data[:linenumber])
+function linerange(doc)
+    @info "linerange" doc
+    linerange(doc.text, doc.data[:linenumber])
+end
 
 function linerange(text, from)
     # text is assumed to be a Core.SimpleVector (svec) from the .text field of a Docs.DocStr object.
@@ -516,32 +475,6 @@ function linerange(text, from)
     # and only the odd ones actually contain the docstring text as a string.
     lines = sum(Int[isodd(n) ? newlines(s) : 0 for (n, s) in enumerate(text)])
     return lines > 0 ? (from:(from + lines + 1)) : (from:from)
-end
-
-struct LineRangeFormatting
-    prefix::String
-    separator::String
-
-    function LineRangeFormatting(host::RepoHost)
-        if host === RepoAzureDevOps
-            new("&line=", "&lineEnd=")
-        elseif host == RepoBitbucket
-            new("", ":")
-        elseif host == RepoGitlab
-            new("L", "-")
-        else
-            # default is github-style
-            new("L", "-L")
-        end
-    end
-end
-
-function format_line(range::AbstractRange, format::LineRangeFormatting)
-    if length(range) <= 1
-        string(format.prefix, first(range))
-    else
-        string(format.prefix, first(range), format.separator, last(range))
-    end
 end
 
 newlines(s::AbstractString) = count(c -> c === '\n', s)

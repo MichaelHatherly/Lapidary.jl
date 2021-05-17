@@ -12,6 +12,7 @@ import ..Documenter:
     Utilities
 
 using DocStringExtensions
+using .Utilities: Remotes
 import Markdown
 
 """
@@ -219,8 +220,10 @@ getsig(λ::Union{Function, DataType}, typesig) = Base.tuple_type_tail(which(λ, 
 # -----------------------------
 
 function issue_xref(link::Markdown.Link, num, meta, page, doc)
-    link.url = isempty(doc.internal.remote) ? link.url :
-        "https://github.com/$(doc.internal.remote)/issues/$num"
+    if doc.user.remote isa Remotes.GitHub
+        user, repo = doc.user.remote.user, doc.user.remote.repo
+        link.url = "https://github.com/$(user)/$(repo)/issues/$num"
+    end
 end
 
 end
