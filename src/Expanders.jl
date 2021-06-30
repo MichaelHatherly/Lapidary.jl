@@ -618,6 +618,21 @@ function Selectors.runner(::Type{REPLBlocks}, x, page, doc)
         end
         Core.eval(mod, Expr(:global, Expr(:(=), :ans, QuoteNode(c.value))))
         result = c.value
+        allowexceptions = false # TODO: implement the `allowexceptions` kwarg for `@repl` blocks
+        if c.error
+            if allowexceptions
+                @debug("""
+                    encountered an exception while running a `@repl` block
+                    that allows exceptions
+                    """, exception=(c.value, c.backtrace))
+            else
+                push!(doc.internal.errors, :repl_block)
+                @warn("""
+                    encountered an exception while running a `@repl` block
+                    that does not allow exceptions
+                    """, exception=(c.value, c.backtrace))
+            end
+        end
         output = if !c.error
             hide = REPL.ends_with_semicolon(input)
             Documenter.DocTests.result_to_string(buffer, hide ? nothing : c.value)
