@@ -19,6 +19,8 @@
   ```
   _This feature is experimental and subject to change in future releases._ ([#1627][github-1627])
 
+* ![Enhancement][badge-enhancement] The `.hljs` CSS class is now added to all code blocks to make sure that the correct text color is used for non-highlighted code blocks and if JavaScript is disabled. ([#1645][github-1645])
+
 * ![Enhancement][badge-enhancement] The sandbox module used for evaluating `@repl` and `@example` blocks is now removed (replaced with `Main`) in text output. ([#1633][github-1633])
 
 * ![Enhancement][badge-enhancement] `@repl`, `@example`, and `@eval` blocks now have `LineNumberNodes` inserted such that e.g. `@__FILE__` and `@__LINE__` give better output and not just `"none"` for the file and `1` for the line. This requires Julia 1.6 or higher (no change on earlier Julia versions). ([#1634][github-1634])
@@ -875,6 +877,7 @@
 [github-1628]: https://github.com/JuliaDocs/Documenter.jl/pull/1628
 [github-1633]: https://github.com/JuliaDocs/Documenter.jl/pull/1633
 [github-1634]: https://github.com/JuliaDocs/Documenter.jl/pull/1634
+[github-1645]: https://github.com/JuliaDocs/Documenter.jl/pull/1645
 
 [julia-38079]: https://github.com/JuliaLang/julia/issues/38079
 [julia-39841]: https://github.com/JuliaLang/julia/pull/39841
